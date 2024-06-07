@@ -18,6 +18,7 @@ struct PlayInfo {
     var cid: Int? = 0
     var epid: Int? = 0 // 港澳台解锁需要
     var isBangumi: Bool = false
+    var ctime: Int? = 0
 
     var isCidVaild: Bool {
         return cid ?? 0 > 0
@@ -115,7 +116,6 @@ class VideoPlayerViewController: CommonPlayerViewController {
         let requestedKeys = ["playable"]
         await asset.loadValues(forKeys: requestedKeys)
         prepare(toPlay: asset, withKeys: requestedKeys)
-        danMuView.play()
         updatePlayerCharpter(playerInfo: playerInfo)
         BiliBiliUpnpDMR.shared.sendVideoSwitch(aid: playInfo.aid, cid: playInfo.cid ?? 0)
     }
@@ -160,9 +160,18 @@ class VideoPlayerViewController: CommonPlayerViewController {
         }
     }
 
+    override func playerRateDidChange(player: AVPlayer) {
+        if player.rate > 0, danMuView.status == .pause {
+            danMuView.play()
+        } else if player.rate == 0, danMuView.status == .play {
+            danMuView.pause()
+        }
+    }
+
     func playNext() -> Bool {
         if let next = nextProvider?.getNext() {
             playInfo = next
+            playerStartPos = 0
             Task {
                 await initPlayer()
             }

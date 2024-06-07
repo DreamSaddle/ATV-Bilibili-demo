@@ -69,11 +69,11 @@ enum WebRequest {
         }
 
         if !afheaders.contains(where: { $0.name == "User-Agent" }) {
-            afheaders.add(.userAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15"))
+            afheaders.add(.userAgent(Keys.userAgent))
         }
 
         if !afheaders.contains(where: { $0.name == "Referer" }) {
-            afheaders.add(HTTPHeader(name: "Referer", value: "https://www.bilibili.com"))
+            afheaders.add(HTTPHeader(name: "Referer", value: Keys.referer))
         }
 
         var session = Session.default
@@ -595,6 +595,7 @@ struct VideoDetail: Codable, Hashable {
         let ugc_season: UgcSeason?
         let redirect_url: URL?
         let stat: Stat
+        var ctime: Int?
         struct Stat: Codable, Hashable {
             let favorite: Int
             let coin: Int
@@ -623,6 +624,7 @@ struct VideoDetail: Codable, Hashable {
             struct UgcVideoInfo: Codable, Hashable, DisplayData {
                 var ownerName: String { "" }
                 var pic: URL? { arc.pic }
+                let id: Int
                 let aid: Int
                 let cid: Int
                 let arc: Arc
@@ -630,6 +632,7 @@ struct VideoDetail: Codable, Hashable {
 
                 struct Arc: Codable, Hashable {
                     let pic: URL
+                    let ctime: Int
                 }
             }
         }
