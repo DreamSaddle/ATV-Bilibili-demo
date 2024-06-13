@@ -707,6 +707,7 @@ struct Replys: Codable, Hashable {
 
         let member: Member
         let content: Content
+        let replies: [Reply]?
     }
 
     let replies: [Reply]?
@@ -842,12 +843,18 @@ struct PlayerInfo: Codable {
         last_play_time / 1000
     }
 
-    struct ViewPoint: Codable {
+    class ViewPoint: Codable {
         let type: Int
         let from: TimeInterval
         let to: TimeInterval
         let content: String
         let imgUrl: URL?
+
+        var imageData: Data?
+
+        enum CodingKeys: String, CodingKey {
+            case type, from, to, content, imgUrl
+        }
     }
 
     struct MaskInfo: Codable {
