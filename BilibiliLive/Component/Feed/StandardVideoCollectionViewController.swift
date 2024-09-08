@@ -36,7 +36,7 @@ class StandardVideoCollectionViewController<T: PlayableData>: UIViewController, 
     }
 
     func setupCollectionView() {
-        collectionVC.pageSize = 40
+        collectionVC.pageSize = 20
         collectionVC.didSelect = {
             [weak self] in
             self?.goDetail(with: $0 as! T)
@@ -76,7 +76,8 @@ class StandardVideoCollectionViewController<T: PlayableData>: UIViewController, 
         page = 1
         do {
             let res = try await request(page: 1)
-            collectionVC.displayDatas = res
+            collectionVC.displayDatas = []
+            collectionVC.appendData(displayData: res)
         } catch let err {
             let alert = UIAlertController(title: "Error", message: "\(err)", preferredStyle: .alert)
             alert.addAction(.init(title: "Ok", style: .cancel))
