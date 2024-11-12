@@ -394,6 +394,10 @@ extension WebRequest {
         requestJSON(method: .post, url: "https://api.bilibili.com/x/v3/fav/resource/deal", parameters: ["rid": aid, "type": 2, "add_media_ids": mid])
     }
 
+    static func removeFavorite(aid: Int, mid: [Int]) {
+        requestJSON(method: .post, url: "https://api.bilibili.com/x/v3/fav/resource/deal", parameters: ["rid": aid, "type": 2, "del_media_ids": mid.map { "\($0)" }.joined(separator: ",")])
+    }
+
     static func requestFavoriteStatus(aid: Int, complete: ((Bool) -> Void)?) {
         requestJSON(url: "https://api.bilibili.com/x/v2/fav/video/favoured", parameters: ["aid": aid]) {
             response in
@@ -701,8 +705,19 @@ struct Replys: Codable, Hashable {
             let avatar: String
         }
 
+        struct Emote: Codable, Hashable {
+            let text: String
+            let url: String
+        }
+
         struct Content: Codable, Hashable {
             let message: String
+            let pictures: [Picture]?
+            let emote: [String: Emote]?
+
+            struct Picture: Codable, Hashable {
+                let img_src: String
+            }
         }
 
         let member: Member

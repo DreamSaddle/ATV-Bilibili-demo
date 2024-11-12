@@ -304,7 +304,7 @@ class VideoDetailViewController: UIViewController {
 
         var notes = [String]()
         let status = data.View.dynamic ?? ""
-        if status.count > 1 {
+        if status.count > 1, status != data.View.desc {
             notes.append(status)
         }
         notes.append(data.View.desc ?? "")
@@ -427,6 +427,12 @@ class VideoDetailViewController: UIViewController {
     @IBAction func actionFavorite(_ sender: Any) {
         Task {
             guard let favList = try? await WebRequest.requestFavVideosList() else {
+                return
+            }
+            if favButton.isOn {
+                favButton.title? -= 1
+                favButton.isOn = false
+                WebRequest.removeFavorite(aid: aid, mid: favList.map { $0.id })
                 return
             }
             let alert = UIAlertController(title: "收藏", message: nil, preferredStyle: .actionSheet)
