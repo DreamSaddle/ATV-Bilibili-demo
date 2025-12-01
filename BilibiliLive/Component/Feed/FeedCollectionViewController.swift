@@ -15,11 +15,13 @@ protocol DisplayData: Hashable {
     var pic: URL? { get }
     var avatar: URL? { get }
     var date: String? { get }
+    var overlay: DisplayOverlay? { get }
 }
 
 extension DisplayData {
     var avatar: URL? { return nil }
     var date: String? { return nil }
+    var overlay: DisplayOverlay? { return nil }
 }
 
 struct AnyDispplayData: Hashable {
@@ -34,6 +36,51 @@ struct AnyDispplayData: Hashable {
 
     func hash(into hasher: inout Hasher) {
         data.hash(into: &hasher)
+    }
+}
+
+struct DisplayOverlay {
+    var leftItems: [DisplayOverlayItem]
+    var rightItems: [DisplayOverlayItem]
+    var badge: DisplayOverlayBadge?
+
+    init(leftItems: [DisplayOverlayItem], rightItems: [DisplayOverlayItem] = [], badge: DisplayOverlayBadge? = nil) {
+        self.leftItems = leftItems
+        self.rightItems = rightItems
+        self.badge = badge
+    }
+
+    struct DisplayOverlayItem {
+        var icon: String?
+        var text: String
+    }
+
+    struct DisplayOverlayBadge {
+        var color: UIColor?
+        var text: String
+    }
+}
+
+struct FeedHeaderConfig {
+    let elementKind: String
+    let estimatedHeight: CGFloat
+    let viewProvider: (UICollectionView, String, IndexPath) -> UICollectionReusableView?
+
+    init<T: UICollectionReusableView>(
+        viewType: T.Type,
+        estimatedHeight: CGFloat = 44,
+        configure: @escaping (T, IndexPath) -> Void
+    ) {
+        elementKind = String(describing: viewType)
+        self.estimatedHeight = estimatedHeight
+
+        let registration = UICollectionView.SupplementaryRegistration<T>(elementKind: elementKind) { view, _, indexPath in
+            configure(view, indexPath)
+        }
+
+        viewProvider = { collectionView, _, indexPath in
+            collectionView.dequeueConfiguredReusableSupplementary(using: registration, for: indexPath)
+        }
     }
 }
 
@@ -52,6 +99,7 @@ class FeedCollectionViewController: UIViewController {
     var pageSize = 20
     var showHeader: Bool = false
     var headerText = ""
+    var customHeaderConfig: FeedHeaderConfig?
 
     var displayDatas: [any DisplayData] {
         set {
@@ -121,25 +169,21 @@ class FeedCollectionViewController: UIViewController {
         }
     }
 
-    private var selfSizeingEnable: Bool {
-        true
-    }
-
     private func makeGridLayoutSection() -> NSCollectionLayoutSection {
         let style = styleOverride ?? Settings.displayStyle
         let heightDimension = NSCollectionLayoutDimension.estimated(style.heightEstimated)
         let item = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(style.fractionalWidth),
-            heightDimension: selfSizeingEnable ? heightDimension : .fractionalHeight(1)
+            heightDimension: heightDimension
         ))
         let hSpacing: CGFloat = style == .large ? 35 : 30
         item.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: hSpacing, bottom: 0, trailing: hSpacing)
         let group = NSCollectionLayoutGroup.horizontal(
             layoutSize: NSCollectionLayoutSize(
                 widthDimension: .fractionalWidth(1),
-                heightDimension: selfSizeingEnable ? heightDimension : .fractionalWidth(style.fractionalHeight)
+                heightDimension: heightDimension
             ),
-            subitem: item,
+            repeatingSubitem: item,
             count: style.feedColCount
         )
         let vSpacing: CGFloat = style == .large ? 24 : 16
@@ -150,12 +194,14 @@ class FeedCollectionViewController: UIViewController {
             section.contentInsets = NSDirectionalEdgeInsets(top: baseSpacing, leading: 0, bottom: 0, trailing: 0)
         }
 
-        let titleSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
-                                               heightDimension: .estimated(44))
         if showHeader {
+            let headerHeight = customHeaderConfig?.estimatedHeight ?? 44
+            let headerKind = customHeaderConfig?.elementKind ?? TitleSupplementaryView.reuseIdentifier
+            let titleSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0),
+                                                   heightDimension: .estimated(headerHeight))
             let titleSupplementary = NSCollectionLayoutBoundarySupplementaryItem(
                 layoutSize: titleSize,
-                elementKind: TitleSupplementaryView.reuseIdentifier,
+                elementKind: headerKind,
                 alignment: .top
             )
             section.boundarySupplementaryItems = [titleSupplementary]
@@ -172,9 +218,17 @@ class FeedCollectionViewController: UIViewController {
             supplementaryView.label.text = self.headerText
         }
 
-        dataSource.supplementaryViewProvider = { view, kind, index in
-            return self.collectionView.dequeueConfiguredReusableSupplementary(
-                using: supplementaryRegistration, for: index
+        dataSource.supplementaryViewProvider = { [weak self] collectionView, kind, indexPath in
+            guard let self else { return nil }
+
+            // 如果有自定义 header 配置，使用自定义的
+            if let customConfig = self.customHeaderConfig, kind == customConfig.elementKind {
+                return customConfig.viewProvider(collectionView, kind, indexPath)
+            }
+
+            // 否则使用默认的 TitleSupplementaryView
+            return collectionView.dequeueConfiguredReusableSupplementary(
+                using: supplementaryRegistration, for: indexPath
             )
         }
 

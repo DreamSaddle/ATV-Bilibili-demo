@@ -1,5 +1,5 @@
 //
-//  NewCommonPlayerViewController.swift
+//  CommonPlayerViewController.swift
 //  BilibiliLive
 //
 //  Created by yicheng on 2024/5/23.
@@ -51,7 +51,7 @@ class CommonPlayerViewController: UIViewController {
         plugin.addViewToPlayerOverlay(container: playerVC.contentOverlayView!)
         activePlugins.append(plugin)
         plugin.playerDidLoad(playerVC: playerVC)
-        if let player = playerVC.player, playerVC.transportBarCustomMenuItems.isEmpty == false {
+        if playerVC.transportBarCustomMenuItems.isEmpty == false {
             updateMenus()
         }
     }
@@ -74,8 +74,8 @@ class CommonPlayerViewController: UIViewController {
 
     func updateMenus() {
         var menus = [UIMenuElement]()
-        activePlugins.forEach {
-            let newMenus = $0.addMenuItems(current: &menus)
+        for activePlugin in activePlugins {
+            let newMenus = activePlugin.addMenuItems(current: &menus)
             menus.append(contentsOf: newMenus)
         }
         playerVC.transportBarCustomMenuItems = menus

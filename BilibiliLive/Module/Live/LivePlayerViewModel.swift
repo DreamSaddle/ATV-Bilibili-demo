@@ -1,11 +1,12 @@
 //
-//  LiveInfoViewModel.swift
+//  LivePlayerViewModel.swift
 //  BilibiliLive
 //
 //  Created by yicheng on 2024/5/13.
 //
 
 import Alamofire
+import Foundation
 import SwiftyJSON
 
 enum LiveError: String, LocalizedError {
@@ -52,15 +53,17 @@ class LivePlayerViewModel {
                 let danmu = await initDanmu()
                 self.onPluginReady?(danmu)
 
+                let infoPlugin = BVideoInfoPlugin()
                 if let info = await fetchDespInfo() {
-                    let subtitle = "\(room.ownerName)·\(info.parent_area_name) \(info.area_name)"
-                    let desp = "\(info.description)\nTags:\(info.tags ?? "")"
-                    let infoPlugin = BVideoInfoPlugin(title: info.title, subTitle: subtitle, desp: desp, pic: room.pic, viewPoints: nil)
-                    self.onPluginReady?([infoPlugin])
+                    infoPlugin.title = info.title
+                    infoPlugin.subTitle = "\(room.ownerName)·\(info.parent_area_name) \(info.area_name)"
+                    infoPlugin.desp = "\(info.description)\nTags:\(info.tags ?? "")"
+                    infoPlugin.pic = room.pic
                 } else {
-                    let infoPlugin = BVideoInfoPlugin(title: room.title, subTitle: nil, desp: nil, pic: room.pic, viewPoints: nil)
-                    self.onPluginReady?([infoPlugin])
+                    infoPlugin.title = room.title
+                    infoPlugin.pic = room.pic
                 }
+                self.onPluginReady?([infoPlugin])
             } catch let err {
                 await MainActor.run {
                     onError?(String(describing: err))
@@ -157,7 +160,7 @@ class LivePlayerViewModel {
 
     func playFirstInfo() async throws {
         if let info = playInfos.first {
-            Logger.debug("play =>", playInfos)
+            Logger.debug("play => \(playInfos)")
             await MainActor.run {
                 playPlugin.play(urlString: info.url)
             }
@@ -167,7 +170,7 @@ class LivePlayerViewModel {
     }
 
     @MainActor private func initDanmu() async -> [CommonPlayerPlugin] {
-        danMuProvider = LiveDanMuProvider(roomID: roomID)
+        danMuProvider = LiveDanMuProvider(roomID: roomID, removeDup: Settings.enableDanmuRemoveDup)
         let danmuPlugin = DanmuViewPlugin(provider: danMuProvider!)
 
         try? await danMuProvider?.start()

@@ -19,6 +19,7 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
     private let imageView = UIImageView()
     private let infoView = UIView()
     private let avatarView = UIImageView()
+    private let overlayView = BLOverlayView()
 
     override func setup() {
         super.setup()
@@ -35,6 +36,16 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
         imageView.layer.cornerRadius = 12
         imageView.clipsToBounds = true
         imageView.contentMode = .scaleAspectFill
+
+        contentView.addSubview(overlayView)
+        overlayView.snp.makeConstraints { make in
+            make.leading.equalTo(imageView.snp.leading)
+            make.trailing.equalTo(imageView.snp.trailing)
+            make.bottom.equalTo(imageView.snp.bottom)
+            make.top.equalTo(imageView.snp.top)
+        }
+        overlayView.layer.cornerRadius = imageView.layer.cornerRadius
+        overlayView.clipsToBounds = true
 
         contentView.addSubview(infoView)
         infoView.snp.makeConstraints { make in
@@ -75,6 +86,7 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
         titleLabel.holdScrolling = true
         titleLabel.setContentHuggingPriority(.required, for: .vertical)
         titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+        titleLabel.fadeLength = 60
         upLabel.setContentHuggingPriority(.required, for: .vertical)
         upLabel.setContentCompressionResistancePriority(.required, for: .vertical)
         upLabel.textColor = UIColor(named: "titleColor")
@@ -84,6 +96,12 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
 
     func setup(data: any DisplayData) {
         titleLabel.text = data.title
+        if let overlay = data.overlay {
+            overlayView.isHidden = false
+            overlayView.configure(overlay)
+        } else {
+            overlayView.isHidden = true
+        }
         upLabel.text = [data.ownerName, data.date].compactMap({ $0 }).joined(separator: " · ")
         if var pic = data.pic {
             if pic.scheme == nil {
@@ -141,9 +159,9 @@ class FeedCollectionViewCell: BLMotionCollectionViewCell {
 extension FeedDisplayStyle {
     var fractionalWidth: CGFloat {
         switch self {
-        case .large:
+        case .large, .sideBar:
             return 0.33
-        case .normal, .sideBar:
+        case .normal:
             return 0.25
         }
     }

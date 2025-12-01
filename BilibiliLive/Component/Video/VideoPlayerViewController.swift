@@ -1,5 +1,5 @@
 //
-//  NewVideoPlayerViewController.swift
+//  VideoPlayerViewController.swift
 //  BilibiliLive
 //
 //  Created by yicheng on 2024/5/23.
@@ -13,6 +13,7 @@ struct PlayInfo {
     let aid: Int
     var cid: Int? = 0
     var epid: Int? = 0 // 港澳台解锁需要
+    var seasonId: Int? = 0 // 番剧 season_id
     var isBangumi: Bool = false
     var ctime: Int? = 0
 
