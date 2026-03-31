@@ -37,20 +37,54 @@ class DanmuViewPlugin: NSObject {
 
     private let danmuProvider: DanmuProviderProtocol
     private var timeObserver: Any?
+    private weak var currentPlayer: AVPlayer? // 保存当前 player 的弱引用
     private var cancellable = Set<AnyCancellable>()
 
     private func shoot(_ model: DanmakuCellModel) {
+        // 当显示区域小于1时,将底部弹幕转为浮动弹幕
+        if danMuView.displayArea < 1, model.type == .bottom {
+            if let shootModel = model as? DanmakuTextCellModel {
+                shootModel.type = .floating
+                danMuView.shoot(danmaku: shootModel)
+                return
+            }
+        }
+
         danMuView.shoot(danmaku: model)
     }
 }
 
 extension DanmuViewPlugin: CommonPlayerPlugin {
+    func playerDidChange(player: AVPlayer) {
+        // 清理旧的 observer（必须用旧的 player 来移除）
+        if let timeObserver, let currentPlayer {
+            currentPlayer.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
+
+        // 保存新的 player 引用
+        currentPlayer = player
+
+        // 清空当前显示的弹幕，准备重新同步
+        danMuView.clean()
+    }
+
     func playerWillStart(player: AVPlayer) {
         guard danmuProvider.observerPlayerTime else {
             return
         }
-        player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1),
-                                       queue: DispatchQueue.global())
+
+        // 清理旧的 observer（如果有）
+        if let timeObserver, let currentPlayer {
+            currentPlayer.removeTimeObserver(timeObserver)
+        }
+
+        // 保存新的 player 引用
+        currentPlayer = player
+
+        // 添加新的 observer 并保存引用
+        timeObserver = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 1),
+                                                      queue: DispatchQueue.global())
         { [weak self] time in
             guard let self else { return }
             if !Defaults.shared.showDanmu { return }
@@ -62,7 +96,9 @@ extension DanmuViewPlugin: CommonPlayerPlugin {
     func playerDidCleanUp(player: AVPlayer) {
         if let timeObserver {
             player.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
         }
+        currentPlayer = nil
     }
 
     func addViewToPlayerOverlay(container: UIView) {

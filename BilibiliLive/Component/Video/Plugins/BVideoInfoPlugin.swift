@@ -9,11 +9,19 @@ import AVKit
 import Kingfisher
 
 class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
-    var title: String?
-    var subTitle: String?
-    var desp: String?
-    var pic: URL?
-    var viewPoints: [PlayerInfo.ViewPoint]?
+    let title: String?
+    let subTitle: String?
+    let desp: String?
+    let pic: URL?
+    let viewPoints: [PlayerInfo.ViewPoint]?
+
+    init(title: String?, subTitle: String?, desp: String?, pic: URL?, viewPoints: [PlayerInfo.ViewPoint]?) {
+        self.title = title
+        self.subTitle = subTitle
+        self.desp = desp
+        self.pic = pic
+        self.viewPoints = viewPoints
+    }
 
     func playerWillStart(player: AVPlayer) {
         Task {
@@ -31,7 +39,13 @@ class BVideoInfoPlugin: NSObject, CommonPlayerPlugin {
             for viewPoint in viewPoints {
                 group.addTask {
                     if let pic = viewPoint.imgUrl?.addSchemeIfNeed(),
-                       let result = try? await KingfisherManager.shared.retrieveImage(with: Kingfisher.ImageResource(downloadURL: pic)),
+                       let result = try? await KingfisherManager.shared.retrieveImage(
+                           with: Kingfisher.ImageResource(downloadURL: pic),
+                           options: [
+                               .onlyLoadFirstFrame,
+                               .processor(DownsamplingImageProcessor(size: CGSize(width: 320, height: 180))),
+                           ]
+                       ),
                        let data = result.image.pngData()
                     {
                         viewPoint.imageData = data

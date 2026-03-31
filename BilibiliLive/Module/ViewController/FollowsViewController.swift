@@ -45,6 +45,25 @@ extension WebRequest {
             return items
                 .filter({ $0.aid != 0 || $0.modules.module_dynamic.major?.pgc != nil })
         }
+
+        enum CodingKeys: String, CodingKey {
+            case items, offset, update_num, update_baseline, has_more
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            items = try container.decode([DynamicFeedData].self, forKey: .items)
+            offset = try container.decode(String.self, forKey: .offset)
+            if let intVal = try? container.decode(Int.self, forKey: .update_num) {
+                update_num = intVal
+            } else if let strVal = try? container.decode(String.self, forKey: .update_num) {
+                update_num = Int(strVal) ?? 0
+            } else {
+                update_num = 0
+            }
+            update_baseline = try container.decode(String.self, forKey: .update_baseline)
+            has_more = try container.decode(Bool.self, forKey: .has_more)
+        }
     }
 
     static func requestFollowsFeed(offset: String, page: Int) async throws -> DynamicFeedInfo {
@@ -150,10 +169,28 @@ struct DynamicFeedData: Codable, PlayableData, DisplayData {
                 }
 
                 struct Pgc: Codable, Hashable {
-                    let epid: Int
+                    let epid: Int?
                     let title: String?
                     let cover: URL?
                     let jump_url: URL?
+
+                    enum CodingKeys: String, CodingKey {
+                        case epid, title, cover, jump_url
+                    }
+
+                    init(from decoder: Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        if let intVal = try? container.decodeIfPresent(Int.self, forKey: .epid) {
+                            epid = intVal
+                        } else if let strVal = try? container.decodeIfPresent(String.self, forKey: .epid) {
+                            epid = Int(strVal)
+                        } else {
+                            epid = nil
+                        }
+                        title = try container.decodeIfPresent(String.self, forKey: .title)
+                        cover = try container.decodeIfPresent(URL.self, forKey: .cover)
+                        jump_url = try container.decodeIfPresent(URL.self, forKey: .jump_url)
+                    }
                 }
             }
         }
